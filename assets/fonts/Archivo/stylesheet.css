@@ -1,0 +1,45 @@
+@font-face {
+    font-family: 'Archivo';
+    src: url('Archivo-SemiBoldItalic.woff2') format('woff2'),
+        url('Archivo-SemiBoldItalic.woff') format('woff');
+    font-weight: 600;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Archivo';
+    src: url('Archivo-Thin.woff2') format('woff2'),
+        url('Archivo-Thin.woff') format('woff');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Archivo';
+    src: url('Archivo-SemiBold.woff2') format('woff2'),
+        url('Archivo-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Archivo';
+    src: url('Archivo-ThinItalic.woff2') format('woff2'),
+        url('Archivo-ThinItalic.woff') format('woff');
+    font-weight: 100;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Archivo';
+    src: url('Archivo-Regular.woff2') format('woff2'),
+        url('Archivo-Regular.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
