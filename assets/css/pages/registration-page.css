@@ -1,0 +1,63 @@
+.form-step {
+  display: none;
+  margin-bottom: 30px;
+}
+
+.form-step.active {
+  display: block;
+}
+
+input, textarea, select {
+  display: block;
+  margin-bottom: 10px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  margin-top: 10px;
+  padding: 8px 15px;
+  cursor: pointer;
+}
+
+.info {
+  font-style: italic;
+  color: #555;
+}
+
+.conditional-message {
+  display: none;
+  padding: 10px;
+  background: #f8f8f8;
+  border-left: 4px solid #0073aa;
+  margin-top: 10px;
+}
+
+.notice-success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.notice-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.input-error {
+  border-color: red;
+}
+
+.error-message {
+  color: red;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
+/*# sourceMappingURL=registration-page.css.map */

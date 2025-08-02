@@ -22,7 +22,7 @@ add_action('wp_enqueue_scripts', 'register_component_styles', 5);
  */
 function register_pages_styles()
 {
-	$pages = ['front-page', 'contact-us'];
+	$pages = ['front-page', 'contact-us','registration-page'];
 
 	foreach ($pages as $page) {
 		$css_file = get_template_directory() . "/assets/css/pages/{$page}.css";

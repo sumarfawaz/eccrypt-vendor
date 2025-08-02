@@ -1,11 +1,17 @@
 <?php
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+
+
 /*
 	Includes
 */
 include_once('inc/theme-functions.php');
 include_once('inc/widgets/custom-shortcodes.php');
-include_once('inc/enqueue-plugins.php');
+include_once('inc/enqueue_plugins.php');
 include_once('inc/register-styles.php');
 include_once('inc/custom-post-types.php');
 include_once('inc/all-post-type-duplicate.php');
@@ -245,3 +251,148 @@ function add_lighthouse_dashboard_widget()
 }
 add_action('wp_dashboard_setup', 'add_lighthouse_dashboard_widget');
 
+
+
+
+// KYC Form Submit AJAX Enque
+function enqueue_kyc_form_scripts()
+{
+	wp_enqueue_script('kyc-form', get_template_directory_uri() . '/assets/js/register-page.js', ['jquery'], null, true);
+
+	wp_localize_script('kyc-form', 'kyc_ajax_object', [
+		'ajax_url' => admin_url('admin-ajax.php'),
+		'nonce' => wp_create_nonce('kyc_form_nonce'),
+	]);
+}
+
+
+
+function handle_kyc_form()
+{
+	check_ajax_referer('kyc_form_nonce', 'security');
+
+	$current_step = isset($_POST['current_step']) ? $_POST['current_step'] : null;
+	$errors = [];
+
+	// For steps except step 4, data comes as JSON string
+	if ($current_step !== '4') {
+		if (isset($_POST['formData'])) {
+			$data = json_decode(stripslashes($_POST['formData']), true);
+		} else {
+			$data = [];
+		}
+	}
+
+	switch ($current_step) {
+		case '1':
+			if (empty($data['registrant_name']))
+				$errors[] = 'Registrant name is required.';
+			if (empty($data['registrant_email']))
+				$errors[] = 'Registrant email is required.';
+			break;
+
+		case '2':
+			if (empty($data['payment_method']))
+				$errors[] = 'Payment method is required.';
+			break;
+
+		case '3-bank':
+			if (empty($data['bank_account_number']))
+				$errors[] = 'Bank Account Number is required.';
+			if (empty($data['account_holder_name']))
+				$errors[] = 'Account Holder Name is required.';
+			if (empty($data['bank']))
+				$errors[] = 'Bank Name is required.';
+			if (empty($data['bank_branch']))
+				$errors[] = 'Bank Branch is required.';
+			break;
+
+		case '3-wallet':
+			if (empty($data['wallet_address']))
+				$errors[] = 'Wallet Address is required.';
+			if (empty($data['wallet_network']))
+				$errors[] = 'Wallet Network is required.';
+			break;
+
+		case '4':
+			// Validate file upload for Agreement
+			if (!isset($_FILES['agreement_file']) || $_FILES['agreement_file']['error'] !== UPLOAD_ERR_OK) {
+				$errors[] = 'Agreement file is required and must be a valid PDF.';
+			} else {
+				$file = $_FILES['agreement_file'];
+				$allowed_types = ['application/pdf'];
+				if (!in_array($file['type'], $allowed_types)) {
+					$errors[] = 'Only PDF files are allowed for the agreement.';
+				}
+			}
+			break;
+
+		case '5':
+			$data = isset($_POST['formData']) ? json_decode(stripslashes($_POST['formData']), true) : $_POST;
+			break;
+
+		default:
+			$errors[] = 'Unknown form step.';
+	}
+
+	if (!empty($errors)) {
+		wp_send_json_error(['errors' => $errors]);
+	}
+
+	// Handle file upload on step 4
+	if ($current_step === '4' && isset($_FILES['agreement_file']) && $_FILES['agreement_file']['error'] === UPLOAD_ERR_OK) {
+		$upload_dir = wp_upload_dir();
+		$file_name = sanitize_file_name(basename($_FILES['agreement_file']['name']));
+		$destination = trailingslashit($upload_dir['path']) . $file_name;
+
+		if (!move_uploaded_file($_FILES['agreement_file']['tmp_name'], $destination)) {
+			wp_send_json_error(['errors' => ['Failed to upload agreement file.']]);
+		}
+
+		// Add file URL to data for saving
+		$data['agreement_file_url'] = trailingslashit($upload_dir['url']) . $file_name;
+	}
+
+	// -----------------------
+	// Save submission as CPT post (ONLY ON STEP 5)
+	// -----------------------
+	if ($current_step === '5') {
+		$post_title = !empty($data['registrant_name']) ? sanitize_text_field($data['registrant_name']) : 'KYC Submission ' . current_time('mysql');
+		$post_content = 'Vendor KYC submission from ' . $post_title;
+
+		// Insert post
+		$post_id = wp_insert_post([
+			'post_title' => $post_title,
+			'post_content' => $post_content,
+			'post_status' => 'publish', // or 'pending'
+			'post_type' => 'vendor_kyc',
+		]);
+
+		if (is_wp_error($post_id)) {
+			wp_send_json_error(['errors' => ['Failed to save KYC submission.']]);
+		}
+
+		// Save all form data as post meta
+		foreach ($data as $key => $value) {
+			$meta_key = sanitize_key($key);
+			if (is_array($value)) {
+				update_post_meta($post_id, $meta_key, maybe_serialize($value));
+			} else {
+				update_post_meta($post_id, $meta_key, sanitize_text_field($value));
+			}
+		}
+
+		wp_send_json_success(['message' => 'Step 5 submitted successfully and saved!']);
+	} else {
+		// Just return success for earlier steps
+		wp_send_json_success(['message' => 'Step ' . $current_step . ' submitted successfully!']);
+	}
+}
+
+
+
+
+add_action('wp_enqueue_scripts', 'enqueue_kyc_form_scripts');
+
+add_action('wp_ajax_submit_kyc_form', 'handle_kyc_form');
+add_action('wp_ajax_nopriv_submit_kyc_form', 'handle_kyc_form');

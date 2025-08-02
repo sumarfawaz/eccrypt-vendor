@@ -1,0 +1,238 @@
+h1, h2, h3, h4, h5, h6, ul, li, p {
+  margin-bottom: 0;
+}
+
+.bg-black {
+  background-color: #020512;
+}
+
+.bg-white {
+  background-color: #FFFFFF;
+}
+
+.white-clr {
+  color: #FFFFFF;
+}
+
+.textColor {
+  color: #020512 !important;
+}
+
+.fw1 {
+  font-weight: 100;
+}
+
+.fw2 {
+  font-weight: 200;
+}
+
+.fw3 {
+  font-weight: 300;
+}
+
+.fw4 {
+  font-weight: 400;
+}
+
+.fw5 {
+  font-weight: 500;
+}
+
+.fw6 {
+  font-weight: 600;
+}
+
+.fw7 {
+  font-weight: 700;
+}
+
+.fw8 {
+  font-weight: 800;
+}
+
+.fw9 {
+  font-weight: 900;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("../assets/fonts/Poppins/Poppins-Regular.woff2") format("woff2"), url("../assets/fonts/Poppins/Poppins-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Arima";
+  src: url("../assets/fonts/Arima/Arima-Regular.woff2") format("woff2"), url("../assets/fonts/Arima/Arima-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Archivo";
+  src: url("../assets/fonts/Archivo/Archivo-Regular.woff2") format("woff2"), url("../assets/fonts/Archivo/Archivo-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+.pop {
+  font-family: "Poppins", sans-serif;
+}
+.pop.t80 {
+  font-size: 40px;
+}
+
+.arch {
+  font-family: "Archivo", sans-serif;
+}
+.arch.t36 {
+  font-size: 24px;
+}
+.arch.t16 {
+  font-size: 14px;
+}
+.arch.t15 {
+  font-size: 14px;
+}
+.arch.t20 {
+  font-size: 15px;
+}
+
+.arima {
+  font-family: "Arima", cursive;
+}
+.arima.t60 {
+  font-size: 30px;
+  line-height: 35px;
+}
+.arima.t70 {
+  font-size: 40px;
+  line-height: 40px;
+}
+.arima.t80 {
+  font-size: 40px;
+  line-height: 40px;
+}
+
+.pt-small {
+  padding-top: 40px;
+}
+
+.pb-small {
+  padding-bottom: 40px;
+}
+
+.pt-large {
+  padding-top: 60px;
+}
+
+.pb-large {
+  padding-bottom: 60px;
+}
+
+a.view-btn {
+  display: inline-block;
+  margin: 15px auto;
+  font-family: "Montserrat", sans-serif;
+  font-size: 20px;
+  color: #ffffff;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 100px;
+  padding: 15px 20px;
+  border: none;
+  background: linear-gradient(90deg, #86C367 0.02%, #27A2DB 92.66%);
+  transition: all 0.3s ease;
+}
+a.view-btn.pulse-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: borderPulse 1000ms infinite ease-out;
+}
+a.view-btn.pulse-button:hover, a.view-btn.pulse-button:focus {
+  animation: borderPulse 1000ms infinite ease-out, hoverShine 200ms;
+}
+
+@media only screen and (min-width: 992px) {
+  .arch.t22 {
+    font-size: 14px;
+    font-style: normal;
+    line-height: 25px;
+  }
+  .arch.t16 {
+    font-size: 16px;
+  }
+  .arch.t80 {
+    font-size: 2.6041666667vw;
+  }
+  .arima.t60 {
+    font-size: 2.0833333333vw;
+    line-height: 2.6041666667vw;
+  }
+  .arima.t60 {
+    font-size: 4.1666666667vw;
+    line-height: 3.3854166667vw;
+  }
+}
+@media only screen and (min-width: 1200px) {
+  .arch.t22 {
+    font-size: 1.0416666667vw;
+    font-style: normal;
+    line-height: 1.5625vw;
+  }
+  .arch.t16 {
+    font-size: 0.8333333333vw;
+  }
+  .arch.t15 {
+    font-size: 0.78125vw;
+  }
+  .arch.t80 {
+    font-size: 4.1666666667vw;
+  }
+  .arch.t20 {
+    font-size: 1.0416666667vw;
+  }
+  .arima.t60 {
+    font-size: 3.125vw;
+    line-height: 3.6458333333vw;
+  }
+  .arima.t50 {
+    font-size: 2.6041666667vw;
+    line-height: 2.6041666667vw;
+  }
+  .arima.t70 {
+    font-size: 3.6458333333vw;
+    line-height: 3.125vw;
+  }
+  .pt-small {
+    padding-top: 4.6875vw;
+  }
+  .pb-small {
+    padding-bottom: 4.6875vw;
+  }
+  .pt-large {
+    padding-top: 7.2916666667vw;
+  }
+  .pb-large {
+    padding-bottom: 7.2916666667vw;
+  }
+}
+@keyframes borderPulse {
+  0% {
+    box-shadow: inset 0px 0px 0px 5px rgba(255, 255, 255, 0.4), 0px 0px 0px 0px rgb(255, 255, 255);
+  }
+  100% {
+    box-shadow: inset 0px 0px 0px 3px rgba(117, 117, 255, 0.2), 0px 0px 0px 10px rgba(255, 255, 255, 0);
+  }
+}
+@keyframes hoverShine {
+  0% {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0) 100%);
+  }
+  50% {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 100%);
+  }
+  100% {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.4) 100%);
+  }
+}
+
+/*# sourceMappingURL=style.css.map */
