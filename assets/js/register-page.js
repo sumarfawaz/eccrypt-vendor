@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedPaymentMethod = null;
     const formData = {};
 
+    let agreementUploaded = false; // <-- Flag to avoid multiple alerts
+
     function showStep(index) {
         steps.forEach((step, i) => {
             const isActive = i === index;
@@ -31,9 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else if (input.type === 'checkbox') {
                 formData[input.name] = input.checked;
             } else if (input.type === 'file') {
-                // For file input, save file object here if needed for FormData upload (optional)
-                // Currently, this saves only file name, but to upload files properly, see note below
-                formData[input.name] = input.files.length > 0 ? input.files[0].name : '';
+                formData[input.name] = input.files.length > 0 ? input.files[0] : null;
             } else {
                 formData[input.name] = input.value;
             }
@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const fieldName = input.name || input.id || 'field';
             const errorId = `error-${fieldName}`;
 
-            // Clear old error
             let oldError = document.getElementById(errorId);
             if (oldError) oldError.remove();
 
@@ -78,16 +77,26 @@ document.addEventListener('DOMContentLoaded', function () {
         return valid;
     }
 
-    // Next buttons for steps 1 to 4
+    function uploadAgreementFile(file) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('action', 'submit_kyc_form');
+        uploadFormData.append('security', kyc_ajax_object.nonce);
+        uploadFormData.append('current_step', '4');
+        uploadFormData.append('agreement_file', file);
+
+        return fetch(kyc_ajax_object.ajax_url, {
+            method: 'POST',
+            body: uploadFormData
+        }).then(res => res.json());
+    }
+
     document.querySelectorAll('.next-step').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             if (!validateStep(current)) return;
 
             const currentStep = steps[current];
             saveStepData(current);
-            stepHistory.push(current);
 
-            // Handle payment method selection on step 2
             if (currentStep.querySelector('input[name="payment_method"]')) {
                 const method = currentStep.querySelector('input[name="payment_method"]:checked');
                 if (!method) {
@@ -98,7 +107,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 selectedPaymentMethod = method.value;
 
-                // Toggle required attributes
                 document.querySelectorAll('[data-bank]').forEach(input => {
                     input.required = selectedPaymentMethod === 'bank';
                 });
@@ -113,22 +121,60 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // After wallet/bank step, go to Agreement step (4)
+            if (steps[current] === steps[4]) { // Agreement step
+                const fileInput = currentStep.querySelector('input[type="file"][name="agreement_file"]');
+                if (!fileInput || fileInput.files.length === 0) {
+                    alert("Please upload the agreement file.");
+                    return;
+                }
+
+                // If already uploaded, skip re-upload and alert
+                if (!agreementUploaded) {
+                    btn.disabled = true;
+                    try {
+                        const result = await uploadAgreementFile(fileInput.files[0]);
+                        if (result.success) {
+                            formData['agreement_file_url'] = result.data.agreement_file_url;
+
+                            //alert('Agreement file uploaded successfully.');
+                            agreementUploaded = true; // Mark uploaded
+
+                            stepHistory.push(current);
+                            current++;
+                            showStep(current);
+                        } else {
+                            alert('File upload failed: ' + (result.data.errors ? result.data.errors.join(', ') : 'Unknown error'));
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('File upload error occurred.');
+                    }
+                    btn.disabled = false;
+                } else {
+                    // Already uploaded - just proceed without alert or re-upload
+                    stepHistory.push(current);
+                    current++;
+                    showStep(current);
+                }
+
+                return;
+            }
+
+
             if (steps[current] === walletStep || steps[current] === bankStep) {
                 current = 4;
                 showStep(current);
                 return;
             }
 
-            // Normal next step (for steps 1, 4)
             if (current < steps.length - 1) {
+                stepHistory.push(current);
                 current++;
                 showStep(current);
             }
         });
     });
 
-    // Previous buttons
     document.querySelectorAll('.prev-step').forEach(btn => {
         btn.addEventListener('click', () => {
             if (stepHistory.length > 0) {
@@ -138,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Show/hide tech stack messages
     const techStackSelect = document.getElementById('techStackSelect');
     if (techStackSelect) {
         techStackSelect.addEventListener('change', function () {
@@ -149,57 +194,60 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Final form submit event
-form.addEventListener('submit', function (e) {
-    e.preventDefault(); // Prevent page reload
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
 
-    // Prevent double submit by lock flag
-    if (form.dataset.isSubmitting === 'true') {
-        return; // Already submitting, ignore extra submits
-    }
-    form.dataset.isSubmitting = 'true';
-
-    const finalStepIndex = steps.length - 1; // usually last step (5)
-
-    if (!validateStep(finalStepIndex)) {
-        alert('Please fill all required fields before submitting.');
-        form.dataset.isSubmitting = 'false'; // release lock if validation fails
-        return;
-    }
-
-    // Save final step data
-    saveStepData(finalStepIndex);
-
-    // Send whole form including file(s)
-    const submitData = new FormData(form);
-    submitData.append('action', 'submit_kyc_form');
-    submitData.append('security', kyc_ajax_object.nonce);
-    submitData.append('current_step', steps[finalStepIndex].dataset.step);
-
-    fetch(kyc_ajax_object.ajax_url, {
-        method: 'POST',
-        body: submitData,
-    })
-    .then(response => response.json())
-    .then(result => {
-        form.dataset.isSubmitting = 'false'; // release lock on completion
-
-        if (result.success) {
-            document.getElementById('kyc-message').innerHTML = `<div class="notice-success">✅ ${result.data.message}</div>`;
-            form.reset();
-            // Disable inputs/buttons to prevent resubmission (optional)
-            form.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
-        } else {
-            document.getElementById('kyc-message').innerHTML = `<div class="notice-error">❌ ${result.data.errors.join('<br>')}</div>`;
+        if (form.dataset.isSubmitting === 'true') {
+            return;
         }
-    })
-    .catch(err => {
-        form.dataset.isSubmitting = 'false'; // release lock on error
-        console.error('AJAX Error:', err);
-        alert('Something went wrong.');
-    });
-});
+        form.dataset.isSubmitting = 'true';
 
+        const finalStepIndex = steps.length - 1;
+
+        if (!validateStep(finalStepIndex)) {
+            alert('Please fill all required fields before submitting.');
+            form.dataset.isSubmitting = 'false';
+            return;
+        }
+
+        saveStepData(finalStepIndex);
+
+        const submitData = new FormData();
+
+        submitData.append('action', 'submit_kyc_form');
+        submitData.append('security', kyc_ajax_object.nonce);
+        submitData.append('current_step', steps[finalStepIndex].dataset.step);
+
+        for (const key in formData) {
+            if (formData[key] instanceof File) {
+                submitData.append(key, formData[key]);
+            } else {
+                submitData.append(key, formData[key]);
+            }
+        }
+
+        fetch(kyc_ajax_object.ajax_url, {
+            method: 'POST',
+            body: submitData,
+        })
+            .then(response => response.json())
+            .then(result => {
+                form.dataset.isSubmitting = 'false';
+
+                if (result.success) {
+                    document.getElementById('kyc-message').innerHTML = `<div class="notice-success">✅ ${result.data.message}</div>`;
+                    form.reset();
+                    form.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
+                } else {
+                    document.getElementById('kyc-message').innerHTML = `<div class="notice-error">❌ ${result.data.errors.join('<br>')}</div>`;
+                }
+            })
+            .catch(err => {
+                form.dataset.isSubmitting = 'false';
+                console.error('AJAX Error:', err);
+                alert('Something went wrong.');
+            });
+    });
 
     showStep(current);
 });

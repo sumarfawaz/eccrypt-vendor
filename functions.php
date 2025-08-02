@@ -339,19 +339,40 @@ function handle_kyc_form()
 		wp_send_json_error(['errors' => $errors]);
 	}
 
-	// Handle file upload on step 4
+	// File Uploading Logic 
 	if ($current_step === '4' && isset($_FILES['agreement_file']) && $_FILES['agreement_file']['error'] === UPLOAD_ERR_OK) {
 		$upload_dir = wp_upload_dir();
-		$file_name = sanitize_file_name(basename($_FILES['agreement_file']['name']));
-		$destination = trailingslashit($upload_dir['path']) . $file_name;
 
+		// Define your custom subfolder inside uploads
+		$custom_subfolder = 'vendor-kyc-files';
+
+		// Make sure the directory exists, create if not
+		$custom_dir_path = trailingslashit($upload_dir['basedir']) . $custom_subfolder;
+		if (!file_exists($custom_dir_path)) {
+			wp_mkdir_p($custom_dir_path);
+		}
+
+		// Sanitize the file name
+		$file_name = sanitize_file_name(basename($_FILES['agreement_file']['name']));
+
+		// Full path for saving
+		$destination = trailingslashit($custom_dir_path) . $file_name;
+
+		// Move uploaded file
 		if (!move_uploaded_file($_FILES['agreement_file']['tmp_name'], $destination)) {
 			wp_send_json_error(['errors' => ['Failed to upload agreement file.']]);
 		}
 
-		// Add file URL to data for saving
-		$data['agreement_file_url'] = trailingslashit($upload_dir['url']) . $file_name;
+		// URL for the uploaded file
+		$file_url = trailingslashit($upload_dir['baseurl']) . $custom_subfolder . '/' . $file_name;
+
+		wp_send_json_success([
+			'message' => 'Agreement file uploaded successfully.',
+			'agreement_file_url' => $file_url
+		]);
 	}
+
+
 
 	// -----------------------
 	// Save submission as CPT post (ONLY ON STEP 5)
@@ -373,8 +394,15 @@ function handle_kyc_form()
 		}
 
 		// Save all form data as post meta
+		$exclude_keys = ['action', 'security', 'current_step'];
+
 		foreach ($data as $key => $value) {
+			if (in_array($key, $exclude_keys)) {
+				continue;
+			}
+
 			$meta_key = sanitize_key($key);
+
 			if (is_array($value)) {
 				update_post_meta($post_id, $meta_key, maybe_serialize($value));
 			} else {
