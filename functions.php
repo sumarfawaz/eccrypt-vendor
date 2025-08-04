@@ -253,20 +253,7 @@ add_action('wp_dashboard_setup', 'add_lighthouse_dashboard_widget');
 
 
 
-
-// KYC Form Submit AJAX Enque
-function enqueue_kyc_form_scripts()
-{
-	wp_enqueue_script('kyc-form', get_template_directory_uri() . '/assets/js/register-page.js', ['jquery'], null, true);
-
-	wp_localize_script('kyc-form', 'kyc_ajax_object', [
-		'ajax_url' => admin_url('admin-ajax.php'),
-		'nonce' => wp_create_nonce('kyc_form_nonce'),
-	]);
-}
-
-
-
+// Handle KYC Form
 function handle_kyc_form()
 {
 	check_ajax_referer('kyc_form_nonce', 'security');
@@ -328,7 +315,7 @@ function handle_kyc_form()
 			break;
 
 		case '5':
-			$data = isset($_POST['formData']) ? json_decode(stripslashes($_POST['formData']), true) : $_POST;
+			$data = $_POST;  // Get raw POST data as associative array
 			break;
 
 		default:
@@ -394,15 +381,12 @@ function handle_kyc_form()
 		}
 
 		// Save all form data as post meta
-		$exclude_keys = ['action', 'security', 'current_step'];
+		$exclude_keys = ['action', 'security', 'current_step', 'formData', 'vendor_token'];
 
 		foreach ($data as $key => $value) {
-			if (in_array($key, $exclude_keys)) {
+			if (in_array($key, $exclude_keys))
 				continue;
-			}
-
 			$meta_key = sanitize_key($key);
-
 			if (is_array($value)) {
 				update_post_meta($post_id, $meta_key, maybe_serialize($value));
 			} else {
@@ -410,7 +394,76 @@ function handle_kyc_form()
 			}
 		}
 
-		wp_send_json_success(['message' => 'Step 5 submitted successfully and saved!']);
+		// Retrieve the agreement file URL
+		$agreement_file_url = $data['agreement_file_url'] ?? '';
+
+		if (empty($agreement_file_url)) {
+			wp_send_json_error(['errors' => ['Agreement file URL is missing. Please re-upload.']]);
+		}
+
+		// Prepare API Payload
+		$api_data = [
+			'registrant_name' => sanitize_text_field($data['registrant_name'] ?? ''),
+			'registrant_email' => sanitize_email($data['registrant_email'] ?? ''),
+			'registrant_phone' => sanitize_text_field($data['registrant_phone'] ?? ''),
+			'registrant_phone_2' => sanitize_text_field($data['registrant_phone_2'] ?? ''),
+			'registrant_designation' => sanitize_text_field($data['registrant_designation'] ?? ''),
+			'business_nature' => sanitize_text_field($data['business_nature'] ?? ''),
+			'business_email' => sanitize_email($data['business_email'] ?? ''),
+			'business_phone' => sanitize_text_field($data['business_phone'] ?? ''),
+			'business_address' => sanitize_text_field($data['business_address'] ?? ''),
+			'business_name' => sanitize_text_field($data['business_name'] ?? ''),
+			'business_domain' => sanitize_text_field($data['business_domain'] ?? ''),
+			'payment_method' => sanitize_text_field($data['payment_method'] ?? ''),
+			'wallet_address' => sanitize_text_field($data['wallet_address'] ?? ''),
+			'wallet_network' => sanitize_text_field($data['wallet_network'] ?? ''),
+			'bank_account_number' => sanitize_text_field($data['bank_account_number'] ?? ''),
+			'account_holder_name' => sanitize_text_field($data['account_holder_name'] ?? ''),
+			'bank_name' => sanitize_text_field($data['bank'] ?? ''),
+			'bank_branch' => sanitize_text_field($data['bank_branch'] ?? ''),
+			'agreement_text' => esc_url_raw($agreement_file_url),
+			'terms_accepted' => true,
+			'agreed_to_tech_stack' => $data['tech_stack'] ?? []
+		];
+
+		// Normalize payment method to API format
+		$payment_map = ['wallet' => 'wallet_transfer', 'bank' => 'bank_transfer'];
+		if (isset($api_data['payment_method'], $payment_map[$api_data['payment_method']])) {
+			$api_data['payment_method'] = $payment_map[$api_data['payment_method']];
+		}
+
+		// API Headers
+		$headers = [
+			'Content-Type' => 'application/json',
+			'Accept' => 'application/json',
+		];
+
+		$token = sanitize_text_field($_POST['vendor_token'] ?? '');
+		if (!empty($token)) {
+			$headers['Authorization'] = 'Bearer ' . $token;
+		}
+
+		error_log('Vendor Token: ' . $token);
+		error_log('API URL: http://192.168.8.189:8000/api/vendor/business-registration');
+		error_log('API Headers: ' . print_r($headers, true));
+		error_log('API Payload: ' . print_r($api_data, true));
+
+
+		// API Call
+		$response = wp_remote_post('http://192.168.8.189:8000/api/vendor/business-registration', [
+			'headers' => $headers,
+			'body' => wp_json_encode($api_data),
+			'timeout' => 15,
+		]);
+
+		$code = wp_remote_retrieve_response_code($response);
+		$body = wp_remote_retrieve_body($response);
+
+		if (is_wp_error($response) || $code !== 200) {
+			wp_send_json_error(['errors' => ['API Error: ' . $code, 'Response: ' . $body]]);
+		}
+
+		wp_send_json_success(['message' => 'KYC submission saved and sent to external API successfully!']);
 	} else {
 		// Just return success for earlier steps
 		wp_send_json_success(['message' => 'Step ' . $current_step . ' submitted successfully!']);
@@ -420,7 +473,38 @@ function handle_kyc_form()
 
 
 
-add_action('wp_enqueue_scripts', 'enqueue_kyc_form_scripts');
+
+
+
+
+
 
 add_action('wp_ajax_submit_kyc_form', 'handle_kyc_form');
 add_action('wp_ajax_nopriv_submit_kyc_form', 'handle_kyc_form');
+
+
+
+// KYC Form Submit AJAX Enque
+function enqueue_kyc_form_scripts()
+{
+	wp_enqueue_script('kyc-form', get_template_directory_uri() . '/assets/js/register-page.js', ['jquery'], null, true);
+
+	wp_localize_script('kyc-form', 'kyc_ajax_object', [
+		'ajax_url' => admin_url('admin-ajax.php'),
+		'nonce' => wp_create_nonce('kyc_form_nonce'),
+	]);
+}
+
+add_action('wp_enqueue_scripts', 'enqueue_kyc_form_scripts');
+
+
+
+
+// Register Main Menu function custom_theme_setup() {
+function custom_theme_setup()
+{
+	register_nav_menus(array(
+		'main-menu' => __('Primary Header', 'ec-crypt-theme'),
+	));
+}
+add_action('after_setup_theme', 'custom_theme_setup');

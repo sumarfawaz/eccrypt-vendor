@@ -96,5 +96,3 @@
 </form>
 
 <div id="kyc-message"></div>
-
-

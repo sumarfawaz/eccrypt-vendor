@@ -218,6 +218,16 @@ document.addEventListener('DOMContentLoaded', function () {
         submitData.append('security', kyc_ajax_object.nonce);
         submitData.append('current_step', steps[finalStepIndex].dataset.step);
 
+        // Get vendor token from localStorage and append
+        const vendorToken = localStorage.getItem('vendor_token');
+        if (!vendorToken) {
+            alert('Vendor token is missing. Please log in again.');
+            form.dataset.isSubmitting = 'false';
+            return;
+        }
+        submitData.append('vendor_token', vendorToken);
+
+        // Append all saved form data
         for (const key in formData) {
             if (formData[key] instanceof File) {
                 submitData.append(key, formData[key]);
@@ -230,24 +240,25 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             body: submitData,
         })
-            .then(response => response.json())
-            .then(result => {
-                form.dataset.isSubmitting = 'false';
+        .then(response => response.json())
+        .then(result => {
+            form.dataset.isSubmitting = 'false';
 
-                if (result.success) {
-                    document.getElementById('kyc-message').innerHTML = `<div class="notice-success">✅ ${result.data.message}</div>`;
-                    form.reset();
-                    form.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
-                } else {
-                    document.getElementById('kyc-message').innerHTML = `<div class="notice-error">❌ ${result.data.errors.join('<br>')}</div>`;
-                }
-            })
-            .catch(err => {
-                form.dataset.isSubmitting = 'false';
-                console.error('AJAX Error:', err);
-                alert('Something went wrong.');
-            });
+            if (result.success) {
+                document.getElementById('kyc-message').innerHTML = `<div class="notice-success">✅ ${result.data.message}</div>`;
+                form.reset();
+                form.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
+            } else {
+                document.getElementById('kyc-message').innerHTML = `<div class="notice-error">❌ ${result.data.errors.join('<br>')}</div>`;
+            }
+        })
+        .catch(err => {
+            form.dataset.isSubmitting = 'false';
+            console.error('AJAX Error:', err);
+            alert('Something went wrong.');
+        });
     });
+
 
     showStep(current);
 });
